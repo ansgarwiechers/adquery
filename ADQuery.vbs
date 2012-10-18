@@ -15,7 +15,7 @@
 '! Query objects from Active Directory via LDAP.
 '!
 '! @author  Ansgar Wiechers <ansgar.wiechers@planetcobalt.net>
-'! @date    2012-10-17
+'! @date    2012-10-18
 '! @version 1.0
 Class ADQuery
 	Private classname_
@@ -258,7 +258,7 @@ Class ADQuery
 	'! @return True if the argument is a string, otherwise False.
 	Private Function IsValidFilter(str)
 		IsValidFilter = False
-		If VarType(arg) = vbString Then
+		If VarType(str) = vbString Then
 			IsValidFilter = True
 		End If
 	End Function

@@ -47,11 +47,20 @@ Examples
 Set qry = New ADQuery
 
 ' create a new ADQuery instance and initialize it with custom values
-base   = "ou=servers,dc=example,dc=com"
-filter = "(objectCategory=computer)"
-attr   = Array("sAMAccountName", "operatingSystem")
+base   = "ou=groups,dc=example,dc=com"
+filter = "(objectCategory=group)"
+attr   = Array("name", "mail")
 scope  = 1
 Set qry = (New ADQuery)(base, filter, attr, scope)
+
+' create a new ADQuery instance with error handling
+On Error Resume Next
+Set qry = New ADQuery
+If Err Then
+  WScript.Echo Err.Description & " (0x" & Hex(Err.Number) & ")"
+  WScript.Quit 1
+End If
+On Error Goto 0
 
 ' change query properties
 qry.SearchBase   = "ou=foo,dc=sub,dc=example,dc=org"
