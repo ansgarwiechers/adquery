@@ -15,11 +15,15 @@
 '! Query objects from Active Directory via LDAP.
 '!
 '! @author  Ansgar Wiechers <ansgar.wiechers@planetcobalt.net>
-'! @date    2012-10-18
-'! @version 1.0
+'! @date    2012-10-29
+'! @version 1.1
 Class ADQuery
 	Private classname_
 	Private ADS_SCOPEENUM
+	Private ADS_CHASE_REFERRALS_NEVER
+	Private ADS_CHASE_REFERRALS_SUBORDINATE
+	Private ADS_CHASE_REFERRALS_EXTERNAL
+	Private ADS_CHASE_REFERRALS_ALWAYS
 
 	Private conn_
 	Private cmd_
@@ -45,10 +49,14 @@ Class ADQuery
 		Dim errtxt : errtxt = Empty
 
 		Set conn_ = Nothing
-		Set cmd_ = Nothing
+		Set cmd_  = Nothing
 
 		classname_ = "ADQuery"
 		ADS_SCOPEENUM = Array("base", "onelevel", "subtree")
+		ADS_CHASE_REFERRALS_NEVER       = &h00
+		ADS_CHASE_REFERRALS_SUBORDINATE = &h20
+		ADS_CHASE_REFERRALS_EXTERNAL    = &h40
+		ADS_CHASE_REFERRALS_ALWAYS      = ADS_CHASE_REFERRALS_SUBORDINATE Or ADS_CHASE_REFERRALS_EXTERNAL
 
 		On Error Resume Next
 		Dim rootDSE : Set rootDSE = GetObject("LDAP://RootDSE")
@@ -76,9 +84,10 @@ Class ADQuery
 
 		Set cmd_ = CreateObject("ADODB.Command")
 		Set cmd_.ActiveConnection = conn_
-		cmd_.Properties("Page Size")     = 1000
-		cmd_.Properties("Timeout")       = 30
-		cmd_.Properties("Cache Results") = False
+		cmd_.Properties("Page Size")       = 1000
+		cmd_.Properties("Timeout")         = 30
+		cmd_.Properties("Cache Results")   = False
+		cmd_.Properties("Chase referrals") = ADS_CHASE_REFERRALS_ALWAYS
 	End Sub
 
 	'! @brief Destructor.
@@ -209,7 +218,7 @@ Class ADQuery
 	'!
 	'! @raise Invalid argument (450)
 	Public Property Get Timeout
-		PageSize = cmd_.Properties("Timeout")
+		Timeout = cmd_.Properties("Timeout")
 	End Property
 
 	Public Property Let Timeout(arg)
@@ -225,7 +234,7 @@ Class ADQuery
 	'!
 	'! @raise Invalid argument (450)
 	Public Property Get CacheResults
-		PageSize = cmd_.Properties("Cache Results")
+		CacheResults = cmd_.Properties("Cache Results")
 	End Property
 
 	Public Property Let CacheResults(arg)
@@ -234,6 +243,38 @@ Class ADQuery
 			Exit Property
 		End If
 		cmd_.Properties("Cache Results") = arg
+	End Property
+
+	'! Indicates whether or not referrals should be chased. For simplicity
+	'! reasons this property only allows for chasing either all or no referrals.
+	'! The default is True (chase all referrals).
+	'!
+	'! This behavior is different from the named property of the ADO command
+	'! object, which allows to selectively chase referrals to external and/or
+	'! subordinate domains and defaults to not chasing referrals.
+	'!
+	'! @see http://msdn.microsoft.com/en-us/library/windows/desktop/aa772250%28v=vs.85%29.aspx (ADS_CHASE_REFERRALS_ENUM enumeration)
+	'!
+	'! @raise Invalid argument (450)
+	Public Property Get ChaseReferrals
+		Dim prop : prop = cmd_.Properties("Chase referrals")
+		If FlagSet(prop, ADS_CHASE_REFERRALS_SUBORDINATE) Or FlagSet(prop, ADS_CHASE_REFERRALS_EXTERNAL) Then
+			ChaseReferrals = True
+		Else
+			ChaseReferrals = False
+		End If
+	End Property
+
+	Public Property Let ChaseReferrals(doChase)
+		If VarType(doChase) <> vbBoolean Then
+			Err.Raise 450, classname_, "Invalid argument. Must be of type boolean."
+			Exit Property
+		End If
+		If doChase Then
+			cmd_.Properties("Chase referrals") = ADS_CHASE_REFERRALS_ALWAYS
+		Else
+			cmd_.Properties("Chase referrals") = ADS_CHASE_REFERRALS_NEVER
+		End If
 	End Property
 
 	' == validation functions =================================================
@@ -312,6 +353,15 @@ Class ADQuery
 		If VarType(val) = vbInteger Then
 			If val >= 0 Then IsPositiveInteger = True
 		End If
+	End Function
+
+	'! Check if the given value contains the given flag.
+	'!
+	'! @param  val  An integer value.
+	'! @param  flag An integer value representing a flag.
+	'! @return True if the flag is set in the given value, otherwise False.
+	Private Function FlagSet(val, flag)
+		FlagSet = ((val And flag) = flag)
 	End Function
 
 	' == public methods =======================================================
