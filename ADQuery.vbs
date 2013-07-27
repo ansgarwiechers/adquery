@@ -286,7 +286,7 @@ Class ADQuery
 	'!         otherwise False.
 	Private Function HasValidSyntax(str)
 		Dim re : Set re = New RegExp
-		re.Pattern = "^(cn=\S+?\s*,\s*)?(ou=\S+?\s*,\s*)*dc=\S+?(\s*,\s*dc=\S+?)+$"
+		re.Pattern = "^(cn=.+?\s*,\s*)?(ou=.+?\s*,\s*)*dc=.+?(\s*,\s*dc=.+?)+$"
 		re.IgnoreCase = True
 		HasValidSyntax = re.Test(str)
 		Set re = Nothing
